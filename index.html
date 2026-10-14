@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SignatureLab — AI-Assisted Handwritten Signature Comparison Studio</title>
+  <meta name="description" content="AI-Assisted Handwritten Signature Verification Studio. Compare handwritten signatures in seconds using image preprocessing and high-dimensional linear algebra vector similarity." />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  
+  <!-- Plotly.js for Interactive Heatmap -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <!-- jsPDF for Academic Report Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+      --card-bg: rgba(255, 255, 255, 0.94);
+      --border-color: rgba(226, 232, 240, 0.88);
+      --shadow-soft: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 10px -2px rgba(15, 23, 42, 0.02);
+      --shadow-hover: 0 20px 35px -8px rgba(99, 102, 241, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      background-color: #fafbfd;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.06) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.05) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      line-height: 1.5;
+      padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .app-header {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.92) 100%);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 20px;
+      padding: 1.75rem 2rem;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.08);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .app-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: var(--primary-gradient);
+    }
+
+    .app-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .app-title-highlight {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .app-subtitle {
+      font-size: 1rem;
+      color: #475569;
+      font-weight: 500;
+      margin-top: 0.35rem;
+    }
+
+    .product-tag {
+      background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+      color: #4f46e5;
+      border: 1px solid #c7d2fe;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      display: inline-flex;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.1);
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      margin-right: 8px;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(12px);
+      margin-bottom: 1.5rem;
+      transition: all 0.25s ease;
+    }
+
+    .card:hover {
+      border-color: #cbd5e1;
+    }
+
+    /* Preset & Controls Bar */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 860px) {
+      .controls-grid { grid-template-columns: 1fr; }
+    }
+
+    label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.35rem;
+      display: block;
+    }
+
+    select, input[type="range"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border-radius: 10px;
+      border: 1.5px solid #cbd5e1;
+      font-family: inherit;
+      font-size: 0.92rem;
+      background: #ffffff;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus { border-color: #6366f1; }
+
+    /* Upload Grid */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .upload-grid { grid-template-columns: 1fr; }
+    }
+
+    .upload-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover {
+      border-color: #818cf8;
+      background: #f5f7ff;
+    }
+
+    .upload-icon { font-size: 2.2rem; margin-bottom: 0.5rem; }
+    .upload-title { font-weight: 700; font-size: 0.98rem; color: #1e293b; }
+    .upload-sub { font-size: 0.82rem; color: #64748b; margin-top: 0.2rem; }
+
+    .preview-canvas-container {
+      margin-top: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .preview-canvas {
+      max-width: 100%;
+      height: 140px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #ffffff;
+    }
+
+    /* Compare Button */
+    .btn-compare {
+      width: 100%;
+      padding: 1rem 2rem;
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.45);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1.5rem 0;
+    }
+
+    .btn-compare:hover {
+      transform: translateY(-2px) scale(1.005);
+      box-shadow: 0 12px 30px -2px rgba(99, 102, 241, 0.6);
+      filter: brightness(1.05);
+    }
+
+    /* Outcome Banner */
+    .outcome-banner {
+      border-radius: 16px;
+      padding: 1.5rem 1.75rem;
+      margin: 1.5rem 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+      display: none;
+    }
+
+    .outcome-high {
+      background: linear-gradient(135deg, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85));
+      border: 1.5px solid #4ade80;
+      color: #14532d;
+    }
+    .outcome-high::before {
+      content: ''; position: absolute; top:0; left:0; right:0; height: 4px;
+      background: linear-gradient(90deg, #10b981, #059669);
+    }
+
+    .outcome-moderate {
+      background: linear-gradient(135deg, rgba(255, 251, 235, 0.95), rgba(254, 243, 199, 0.85));
+      border: 1.5px solid #facc15;
+      color: #78350f;
+    }
+    .outcome-moderate::before {
+      content: ''; position: absolute; top:0; left:0; right:0; height: 4px;
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+    }
+
+    .outcome-low {
+      background: linear-gradient(135deg, rgba(254, 242, 242, 0.95), rgba(254, 226, 226, 0.85));
+      border: 1.5px solid #f87171;
+      color: #7f1d1d;
+    }
+    .outcome-low::before {
+      content: ''; position: absolute; top:0; left:0; right:0; height: 4px;
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
+    .outcome-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.015em;
+    }
+
+    .outcome-desc {
+      font-size: 0.96rem;
+      line-height: 1.55;
+      margin-top: 0.35rem;
+    }
+
+    /* Metric Cards Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    @media (max-width: 640px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1.5px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+      transition: all 0.25s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: var(--primary-gradient);
+    }
+
+    .metric-label {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 0.4rem;
+    }
+
+    .metric-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2.7rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-sub {
+      font-size: 0.84rem;
+      color: #475569;
+      margin-top: 0.4rem;
+    }
+
+    /* Visual Display Columns */
+    .vis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 1rem;
+      align-items: center;
+      margin: 1.5rem 0;
+    }
+
+    @media (max-width: 900px) {
+      .vis-grid { grid-template-columns: 1fr; }
+    }
+
+    .canvas-preview-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .canvas-preview-card canvas {
+      width: 100%;
+      height: 150px;
+      object-fit: contain;
+      background: #000000;
+      border-radius: 8px;
+    }
+
+    .canvas-card-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #475569;
+      margin-top: 0.5rem;
+    }
+
+    /* Report Export Buttons */
+    .export-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .export-grid { grid-template-columns: 1fr; }
+    }
+
+    .btn-export {
+      padding: 0.85rem 1.25rem;
+      border-radius: 12px;
+      border: 1.5px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    .btn-export:hover {
+      border-color: #6366f1;
+      color: #4f46e5;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+      transform: translateY(-1px);
+    }
+
+    /* Authenticity Notice */
+    .authenticity-notice {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+      border-left: 4px solid #3b82f6;
+      border-radius: 10px;
+      padding: 0.95rem 1.25rem;
+      margin: 1.25rem 0;
+      font-size: 0.9rem;
+      color: #1e3a8a;
+      line-height: 1.5;
+    }
+
+    /* History Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.75rem;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 0.65rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th { font-weight: 700; color: #475569; background: #f8fafc; }
+
+    footer {
+      border-top: 1px solid #e2e8f0;
+      margin-top: 3.5rem;
+      padding-top: 1.75rem;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- Hero Header -->
+    <header class="app-header">
+      <div>
+        <h1 class="app-title">
+          <span>✍️</span> <span class="app-title-highlight">SignatureLab</span> Studio
+        </h1>
+        <p class="app-subtitle">
+          AI-Assisted Handwritten Signature Verification & Vector Geometry Engine
+        </p>
+      </div>
+      <div>
+        <span class="product-tag">
+          <span class="live-dot"></span> In-Memory Verification Engine
+        </span>
+      </div>
+    </header>
+
+    <!-- Main Workspace Card -->
+    <main class="card">
+      
+      <!-- Preset Benchmark Selector -->
+      <div class="controls-grid">
+        <div>
+          <label>⚡ Quick Benchmark Preset (Optional)</label>
+          <select id="presetSelect">
+            <option value="">-- Choose Benchmark Pair --</option>
+            <option value="author_a_gen" selected>Author A: Genuine vs Genuine (Same Writer)</option>
+            <option value="author_a_forged">Author A: Genuine vs Skilled Forgery</option>
+            <option value="author_b_gen">Author B: Genuine vs Genuine (Same Writer)</option>
+            <option value="cross_author">Author A vs Author B (Different Writers)</option>
+          </select>
+        </div>
+        <div>
+          <label>Canvas Resolution</label>
+          <select id="canvasResolution">
+            <option value="128x256">128 × 256 (32,768-D)</option>
+            <option value="64x128">64 × 128 (8,192-D)</option>
+            <option value="256x512">256 × 512 (131,072-D)</option>
+          </select>
+        </div>
+        <div>
+          <label>Threshold (τ = <span id="threshVal">0.70</span>)</label>
+          <input type="range" id="thresholdSlider" min="0.50" max="0.90" step="0.01" value="0.70" />
+        </div>
+      </div>
+
+      <!-- Upload Zone Grid -->
+      <div class="upload-grid">
+        
+        <!-- Reference Card -->
+        <div class="card" style="padding: 1.25rem; margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-family: 'Outfit'; font-size: 1.05rem; font-weight: 700;">1️⃣ Reference Signature</h3>
+            <span style="font-size: 0.75rem; background: #f0fdf4; color: #16a34a; padding: 2px 8px; border-radius: 999px; font-weight: 700;">Baseline</span>
+          </div>
+          <div class="upload-zone" id="refDropZone" onclick="document.getElementById('refInput').click()">
+            <div class="upload-icon">🖋️</div>
+            <div class="upload-title" id="refName">Author A (Genuine #1)</div>
+            <div class="upload-sub">Click to browse or drop PNG, JPG</div>
+            <input type="file" id="refInput" accept="image/*" style="display: none;" />
+          </div>
+          <div class="preview-canvas-container">
+            <canvas id="refCanvas" class="preview-canvas"></canvas>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px;">Active Input Preview</div>
+          </div>
+        </div>
+
+        <!-- Test Card -->
+        <div class="card" style="padding: 1.25rem; margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-family: 'Outfit'; font-size: 1.05rem; font-weight: 700;">2️⃣ Test Signature</h3>
+            <span style="font-size: 0.75rem; background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 999px; font-weight: 700;">Comparison</span>
+          </div>
+          <div class="upload-zone" id="testDropZone" onclick="document.getElementById('testInput').click()">
+            <div class="upload-icon">🔍</div>
+            <div class="upload-title" id="testName">Author A (Genuine #2)</div>
+            <div class="upload-sub">Click to browse or drop PNG, JPG</div>
+            <input type="file" id="testInput" accept="image/*" style="display: none;" />
+          </div>
+          <div class="preview-canvas-container">
+            <canvas id="testCanvas" class="preview-canvas"></canvas>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px;">Active Input Preview</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Button -->
+      <button class="btn-compare" id="btnCompare">
+        <span>⚡ ANALYZE & COMPARE SIGNATURES</span>
+      </button>
+
+      <!-- RESULTS SECTION -->
+      <div id="resultsSection" style="display: none;">
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 2rem 0 1.5rem 0;" />
+        
+        <h2 style="font-family: 'Outfit'; font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem;">
+          📊 Verification & Comparison Results
+        </h2>
+
+        <!-- Outcome Banner -->
+        <div id="outcomeBanner" class="outcome-banner">
+          <div class="outcome-title" id="outcomeTitle"></div>
+          <div class="outcome-desc" id="outcomeDesc"></div>
+        </div>
+
+        <!-- Authenticity Notice -->
+        <div class="authenticity-notice">
+          <b>Mathematical Verification Notice:</b> This result measures vector subspace alignment between preprocessed digital images. 
+          This result alone does not establish biometric or legal proof of identity. Scanner noise, natural intra-person variation, 
+          and pen stroke pressure influence numerical similarity.
+        </div>
+
+        <!-- Prominent Metric Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Cosine Similarity (cos θ)</div>
+            <div class="metric-val" id="metricCosine" style="color: #10b981;">0.0000</div>
+            <div class="metric-sub">Directional stroke alignment in ℝ<sup>N</sup> (Range: 0.0000 to 1.0000)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Euclidean Distance ||u - v||₂</div>
+            <div class="metric-val" id="metricEuclidean" style="color: #0f172a;">0.00</div>
+            <div class="metric-sub">Numerical distance between coordinate vectors (Smaller is closer)</div>
+          </div>
+        </div>
+
+        <!-- Preprocessed Canonical Canvases & Difference Heatmap -->
+        <div class="vis-grid">
+          <div class="canvas-preview-card">
+            <canvas id="refCanonicalCanvas"></canvas>
+            <div class="canvas-card-label">Reference Canonical Canvas (128×256)</div>
+          </div>
+          <div class="canvas-preview-card">
+            <canvas id="testCanonicalCanvas"></canvas>
+            <div class="canvas-card-label">Test Canonical Canvas (128×256)</div>
+          </div>
+          <div class="canvas-preview-card" style="padding: 0.5rem; overflow: hidden;">
+            <div id="heatmapPlot" style="width: 100%; height: 210px;"></div>
+            <div class="canvas-card-label">Spatial Residual Error Heatmap |M₁ - M₂|</div>
+          </div>
+        </div>
+
+        <!-- Academic Report Downloads -->
+        <div class="card" style="margin-top: 1.5rem; background: #f8fafc;">
+          <h3 style="font-family: 'Outfit'; font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">
+            📄 Formal Academic Report Deliverable
+          </h3>
+          <p style="font-size: 0.88rem; color: #64748b;">
+            Export the complete mathematical proof, Cauchy-Schwarz derivation, and comparison metrics ready for submission.
+          </p>
+          <div class="export-grid">
+            <button class="btn-export" id="btnDownloadPDF">
+              <span>📥 Download Academic Report (PDF)</span>
+            </button>
+            <button class="btn-export" onclick="window.print()">
+              <span>🖨️ Print / Save Full Summary</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="card" style="margin-top: 1.5rem;">
+          <h3 style="font-family: 'Outfit'; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">
+            🕒 Session Comparison Log
+          </h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Reference</th>
+                <th>Test</th>
+                <th>Cosine (cos θ)</th>
+                <th>Distance</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div style="font-weight: 700; color: #334155; margin-bottom: 6px;">
+        SignatureLab Studio — AI-Assisted Handwritten Signature Verification
+      </div>
+      <div>
+        Linear Algebra Undergraduate Mini-Project • In-Memory Processing Guarantee • No Cloud Data Persistence
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Procedural Synthetic Signature Generator & Linear Algebra Engine -->
+  <script>
+    // --- Synthetic Sample Generator (Alex Carter & Sophia Miller) ---
+    function renderSyntheticSignature(canvas, type) {
+      const ctx = canvas.getContext('2d');
+      canvas.width = 500;
+      canvas.height = 250;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#1e1b4b';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      function drawStrokes(strokes, noise = 0, scaleX = 1, scaleY = 1, shiftX = 0, shiftY = 0) {
+        strokes.forEach(stroke => {
+          ctx.beginPath();
+          stroke.forEach((pt, idx) => {
+            const jx = (pt[0] * scaleX + shiftX) + (Math.random() - 0.5) * noise;
+            const jy = (pt[1] * scaleY + shiftY) + (Math.random() - 0.5) * noise;
+            if (idx === 0) ctx.moveTo(jx, jy);
+            else ctx.lineTo(jx, jy);
+          });
+          ctx.stroke();
+        });
+      }
+
+      const authorA_Strokes = [
+        [[70, 180], [85, 120], [105, 60], [125, 130], [145, 190]],
+        [[85, 140], [135, 135], [150, 100], [170, 150]],
+        [[170, 150], [190, 135], [205, 160], [220, 130], [240, 165], [260, 130], [280, 155]],
+        [[140, 200], [220, 205], [320, 195], [410, 185]]
+      ];
+
+      const authorB_Strokes = [
+        [[90, 80], [130, 60], [145, 90], [115, 120], [100, 150], [135, 175], [165, 150]],
+        [[165, 150], [200, 90], [220, 165], [240, 95], [265, 160]],
+        [[265, 160], [310, 145], [345, 165], [380, 130], [410, 170], [360, 210], [280, 205]]
+      ];
+
+      if (type === 'author_a_1') {
+        drawStrokes(authorA_Strokes, 1.0);
+      } else if (type === 'author_a_2') {
+        // Genuine variant 2: natural human speed & shift
+        drawStrokes(authorA_Strokes, 2.5, 0.98, 0.97, 8, -4);
+      } else if (type === 'author_a_forged') {
+        // Skilled Forgery: hesitant jitter & altered proportions
+        ctx.lineWidth = 4.2;
+        drawStrokes(authorA_Strokes, 6.0, 1.05, 0.92, -5, 12);
+      } else if (type === 'author_b_1') {
+        drawStrokes(authorB_Strokes, 1.2);
+      }
+    }
+
+    // Canvas elements
+    const refCanvas = document.getElementById('refCanvas');
+    const testCanvas = document.getElementById('testCanvas');
+    const refCanonicalCanvas = document.getElementById('refCanonicalCanvas');
+    const testCanonicalCanvas = document.getElementById('testCanonicalCanvas');
+
+    let currentMetrics = null;
+    let comparisonHistory = [];
+
+    // Initialize with Author A genuine pair
+    function loadPreset(presetKey) {
+      if (presetKey === 'author_a_gen') {
+        renderSyntheticSignature(refCanvas, 'author_a_1');
+        renderSyntheticSignature(testCanvas, 'author_a_2');
+        document.getElementById('refName').innerText = 'Author A (Genuine #1)';
+        document.getElementById('testName').innerText = 'Author A (Genuine #2)';
+      } else if (presetKey === 'author_a_forged') {
+        renderSyntheticSignature(refCanvas, 'author_a_1');
+        renderSyntheticSignature(testCanvas, 'author_a_forged');
+        document.getElementById('refName').innerText = 'Author A (Genuine #1)';
+        document.getElementById('testName').innerText = 'Author A (Skilled Forgery)';
+      } else if (presetKey === 'author_b_gen') {
+        renderSyntheticSignature(refCanvas, 'author_b_1');
+        renderSyntheticSignature(testCanvas, 'author_b_1');
+        document.getElementById('refName').innerText = 'Author B (Genuine #1)';
+        document.getElementById('testName').innerText = 'Author B (Genuine #2)';
+      } else if (presetKey === 'cross_author') {
+        renderSyntheticSignature(refCanvas, 'author_a_1');
+        renderSyntheticSignature(testCanvas, 'author_b_1');
+        document.getElementById('refName').innerText = 'Author A (Writer 1)';
+        document.getElementById('testName').innerText = 'Author B (Writer 2)';
+      }
+    }
+
+    // Set initial
+    loadPreset('author_a_gen');
+
+    document.getElementById('presetSelect').addEventListener('change', (e) => {
+      if (e.target.value) loadPreset(e.target.value);
+    });
+
+    document.getElementById('thresholdSlider').addEventListener('input', (e) => {
+      document.getElementById('threshVal').innerText = parseFloat(e.target.value).toFixed(2);
+    });
+
+    // File Upload Handling
+    function handleFileUpload(inputElem, canvasElem, titleElem, defaultLabel) {
+      inputElem.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            canvasElem.width = img.width;
+            canvasElem.height = img.height;
+            const ctx = canvasElem.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            titleElem.innerText = file.name;
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    handleFileUpload(document.getElementById('refInput'), refCanvas, document.getElementById('refName'), 'Reference Signature');
+    handleFileUpload(document.getElementById('testInput'), testCanvas, document.getElementById('testName'), 'Test Signature');
+
+    // --- Core Linear Algebra & Image Preprocessing Pipeline ---
+    function preprocessCanvasToCanonical(srcCanvas, targetH = 128, targetW = 256, padding = 10) {
+      const srcCtx = srcCanvas.getContext('2d');
+      const w = srcCanvas.width;
+      const h = srcCanvas.height;
+      const imgData = srcCtx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+
+      // 1. Grayscale luminance conversion (Y = 0.299R + 0.587G + 0.114B)
+      const gray = new Float32Array(w * h);
+      let sum = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const g = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+        const idx = i / 4;
+        gray[idx] = g;
+        sum += g;
+      }
+      const mean = sum / (w * h);
+      const isLightBg = mean > 127.5;
+
+      // 2. Stroke mask & Otsu-style threshold bounding box
+      let minX = w, maxX = 0, minY = h, maxY = 0;
+      let strokePointsCount = 0;
+
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const val = gray[y * w + x];
+          // stroke is dark ink on light background
+          const isStroke = isLightBg ? val < 190 : val > 65;
+          if (isStroke) {
+            strokePointsCount++;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      // Fallback if blank
+      if (strokePointsCount < 20) {
+        minX = 0; maxX = w - 1; minY = 0; maxY = h - 1;
+      }
+
+      // Add padding
+      const cropX = Math.max(0, minX - padding);
+      const cropY = Math.max(0, minY - padding);
+      const cropW = Math.min(w - cropX, (maxX - minX + 1) + 2 * padding);
+      const cropH = Math.min(h - cropY, (maxY - minY + 1) + 2 * padding);
+
+      // 3. Aspect-ratio-preserving proportional resize to Canonical Canvas
+      const scale = Math.min(targetW / cropW, targetH / cropH);
+      const newW = Math.max(1, Math.round(cropW * scale));
+      const newH = Math.max(1, Math.round(cropH * scale));
+      const padLeft = Math.floor((targetW - newW) / 2);
+      const padTop = Math.floor((targetH - newH) / 2);
+
+      // Temp canvas for cropped region
+      const tempC = document.createElement('canvas');
+      tempC.width = newW;
+      tempC.height = newH;
+      const tempCtx = tempC.getContext('2d');
+      tempCtx.drawImage(srcCanvas, cropX, cropY, cropW, cropH, 0, 0, newW, newH);
+
+      const resizedData = tempCtx.getImageData(0, 0, newW, newH).data;
+
+      // 4. Canonical Foreground Matrix M (Target: [targetH, targetW], strokes in [0.0, 1.0])
+      const matrix = [];
+      const vector = new Float64Array(targetH * targetW);
+
+      for (let r = 0; r < targetH; r++) {
+        const row = [];
+        for (let c = 0; c < targetW; c++) {
+          let val = 0.0;
+          if (r >= padTop && r < padTop + newH && c >= padLeft && c < padLeft + newW) {
+            const subY = r - padTop;
+            const subX = c - padLeft;
+            const pIdx = (subY * newW + subX) * 4;
+            const g = 0.299 * resizedData[pIdx] + 0.587 * resizedData[pIdx+1] + 0.114 * resizedData[pIdx+2];
+            // Normalize dark ink to bright foreground in [0.0, 1.0], paper to 0.0
+            val = isLightBg ? Math.max(0.0, (255 - g) / 255.0) : Math.max(0.0, g / 255.0);
+          }
+          row.push(val);
+          vector[r * targetW + c] = val;
+        }
+        matrix.push(row);
+      }
+
+      return { matrix, vector, targetH, targetW, isLightBg };
+    }
+
+    function renderMatrixToCanvas(matrix, canvasElem, targetH, targetW) {
+      canvasElem.width = targetW;
+      canvasElem.height = targetH;
+      const ctx = canvasElem.getContext('2d');
+      const imgData = ctx.createImageData(targetW, targetH);
+      const data = imgData.data;
+
+      for (let r = 0; r < targetH; r++) {
+        for (let c = 0; c < targetW; c++) {
+          const val = Math.min(1.0, Math.max(0.0, matrix[r][c]));
+          const idx = (r * targetW + c) * 4;
+          const pixelVal = Math.round(val * 255);
+          data[idx] = pixelVal;
+          data[idx+1] = pixelVal;
+          data[idx+2] = pixelVal;
+          data[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    // --- Vector Linear Algebra Operations ---
+    function computeVectorMetrics(vecU, vecV, dim) {
+      let dot = 0.0;
+      let sumSqU = 0.0;
+      let sumSqV = 0.0;
+      let sumSqDiff = 0.0;
+
+      for (let i = 0; i < dim; i++) {
+        const u = vecU[i];
+        const v = vecV[i];
+        dot += u * v;
+        sumSqU += u * u;
+        sumSqV += v * v;
+        const diff = u - v;
+        sumSqDiff += diff * diff;
+      }
+
+      const normU = Math.sqrt(sumSqU);
+      const normV = Math.sqrt(sumSqV);
+      const eucDist = Math.sqrt(sumSqDiff);
+
+      let cosSim = 0.0;
+      if (normU > 1e-9 && normV > 1e-9) {
+        cosSim = dot / (normU * normV);
+        cosSim = Math.max(0.0, Math.min(1.0, cosSim));
+      }
+
+      const angleRad = Math.acos(cosSim);
+      const angleDeg = (angleRad * 180.0) / Math.PI;
+
+      return {
+        dimension: dim,
+        dotProduct: dot,
+        normU,
+        normV,
+        euclideanDistance: eucDist,
+        cosineSimilarity: cosSim,
+        angleDegrees: angleDeg
+      };
+    }
+
+    // --- Compare Event ---
+    document.getElementById('btnCompare').addEventListener('click', () => {
+      const resVal = document.getElementById('canvasResolution').value.split('x');
+      const targetH = parseInt(resVal[0], 10);
+      const targetW = parseInt(resVal[1], 10);
+      const threshold = parseFloat(document.getElementById('thresholdSlider').value);
+
+      const refPrep = preprocessCanvasToCanonical(refCanvas, targetH, targetW);
+      const testPrep = preprocessCanvasToCanonical(testCanvas, targetH, targetW);
+
+      renderMatrixToCanvas(refPrep.matrix, refCanonicalCanvas, targetH, targetW);
+      renderMatrixToCanvas(testPrep.matrix, testCanonicalCanvas, targetH, targetW);
+
+      const metrics = computeVectorMetrics(refPrep.vector, testPrep.vector, targetH * targetW);
+      currentMetrics = metrics;
+
+      // Update Outcome UI
+      const outcomeBanner = document.getElementById('outcomeBanner');
+      outcomeBanner.style.display = 'block';
+      outcomeBanner.className = 'outcome-banner';
+
+      const cosScore = metrics.cosineSimilarity;
+      const eucDist = metrics.euclideanDistance;
+
+      let catTitle = '';
+      let catDesc = '';
+      let catClass = '';
+
+      if (cosScore >= threshold) {
+        catClass = 'outcome-high';
+        catTitle = '✅ High Similarity Match';
+        catDesc = `These signatures demonstrate high numerical alignment (Cosine Similarity = <b>${cosScore.toFixed(4)}</b>) exceeding the provisional threshold (τ = ${threshold.toFixed(2)}). The normalized stroke coordinates align strongly in ${metrics.dimension.toLocaleString()}-dimensional Euclidean space.`;
+        document.getElementById('metricCosine').style.color = '#15803d';
+      } else if (cosScore >= 0.50) {
+        catClass = 'outcome-moderate';
+        catTitle = '⚖️ Moderate Similarity';
+        catDesc = `These signatures have moderate numerical similarity (Cosine Similarity = <b>${cosScore.toFixed(4)}</b>). There is partial stroke geometry overlap with observable spatial deviations.`;
+        document.getElementById('metricCosine').style.color = '#b45309';
+      } else {
+        catClass = 'outcome-low';
+        catTitle = '❌ Low Similarity / Divergent Signature';
+        catDesc = `These signatures have low numerical similarity (Cosine Similarity = <b>${cosScore.toFixed(4)}</b>). The stroke representations diverge significantly in coordinate distribution across the canonical canvas.`;
+        document.getElementById('metricCosine').style.color = '#b91c1c';
+      }
+
+      outcomeBanner.classList.add(catClass);
+      document.getElementById('outcomeTitle').innerHTML = catTitle;
+      document.getElementById('outcomeDesc').innerHTML = catDesc;
+
+      document.getElementById('metricCosine').innerText = cosScore.toFixed(4);
+      document.getElementById('metricEuclidean').innerText = eucDist.toFixed(2);
+
+      // Plot Difference Heatmap |M_ref - M_test|
+      const diffMatrix = [];
+      for (let r = 0; r < targetH; r++) {
+        const row = [];
+        for (let c = 0; c < targetW; c++) {
+          row.push(Math.abs(refPrep.matrix[r][c] - testPrep.matrix[r][c]));
+        }
+        diffMatrix.push(row);
+      }
+
+      Plotly.newPlot('heatmapPlot', [{
+        z: diffMatrix,
+        type: 'heatmap',
+        colorscale: 'Reds',
+        showscale: false
+      }], {
+        margin: { l: 5, r: 5, t: 5, b: 5 },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        xaxis: { visible: false },
+        yaxis: { visible: false }
+      }, { responsive: true, displayModeBar: false });
+
+      // Add to Session History
+      const refLabel = document.getElementById('refName').innerText;
+      const testLabel = document.getElementById('testName').innerText;
+      const now = new Date().toLocaleTimeString();
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${now}</td>
+        <td><b>${refLabel}</b></td>
+        <td><b>${testLabel}</b></td>
+        <td><code>${cosScore.toFixed(4)}</code></td>
+        <td><code>${eucDist.toFixed(2)}</code></td>
+        <td><span style="font-weight: 700;">${catTitle.split(' ')[1]}</span></td>
+      `;
+      document.getElementById('historyBody').prepend(tr);
+
+      document.getElementById('resultsSection').style.display = 'block';
+      document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // --- PDF Academic Report Generator (jsPDF) ---
+    document.getElementById('btnDownloadPDF').addEventListener('click', () => {
+      if (!currentMetrics) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(15, 23, 42);
+      doc.text("ACADEMIC PROJECT REPORT", 105, 22, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(79, 70, 229);
+      doc.text("Handwritten Signature Verification Using Linear Algebra in R^N", 105, 30, { align: "center" });
+
+      doc.setDrawColor(79, 70, 229);
+      doc.setLineWidth(0.8);
+      doc.line(20, 34, 190, 34);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.text("1. Executive Summary & Verification Metrics", 20, 44);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(51, 65, 85);
+      doc.text(`• Comparison Timestamp: ${new Date().toLocaleString()}`, 24, 52);
+      doc.text(`• Canonical Vector Dimension (N): ${currentMetrics.dimension.toLocaleString()} dimensions`, 24, 60);
+      doc.text(`• Standard Inner Product <u, v>: ${currentMetrics.dotProduct.toFixed(4)}`, 24, 68);
+      doc.text(`• Reference Vector L2 Norm ||u||: ${currentMetrics.normU.toFixed(4)}`, 24, 76);
+      doc.text(`• Test Vector L2 Norm ||v||: ${currentMetrics.normV.toFixed(4)}`, 24, 84);
+      doc.text(`• Euclidean Distance d(u, v): ${currentMetrics.euclideanDistance.toFixed(4)}`, 24, 92);
+      doc.text(`• Cosine Similarity cos(theta): ${currentMetrics.cosineSimilarity.toFixed(4)}`, 24, 100);
+      doc.text(`• Subspace Angle theta: ${currentMetrics.angleDegrees.toFixed(2)} degrees`, 24, 108);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.text("2. Mathematical Formulation & Cauchy-Schwarz Bound", 20, 122);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.text("Theorem (Cauchy-Schwarz): For all vectors u, v in Euclidean space R^N, |<u, v>| <= ||u|| ||v||.", 24, 130);
+      doc.text("Consequence: The cosine of the angle cos(theta) = <u, v> / (||u|| ||v||) strictly satisfies -1 <= cos(theta) <= 1.", 24, 137);
+      doc.text("Because pixel stroke intensities are non-negative, the vectors reside in the non-negative orthant,", 24, 144);
+      doc.text("guaranteeing that 0 <= cos(theta) <= 1, representing pure directional stroke alignment.", 24, 151);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.text("3. Academic Authenticity Disclaimer", 20, 165);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("This evaluation measures digital mathematical stroke alignment. Numerical similarity alone", 24, 173);
+      doc.text("does not constitute legal or biometric proof of identity or forensic verification.", 24, 180);
+
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 270, 190, 270);
+      doc.setFontSize(8.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text("Generated by SignatureLab Studio • Linear Algebra Undergraduate Mini-Project", 105, 276, { align: "center" });
+
+      doc.save(`SignatureLab_Report_${Date.now()}.pdf`);
+    });
+
+    // Auto-run first comparison on initial load
+    window.addEventListener('load', () => {
+      document.getElementById('btnCompare').click();
+    });
+  </script>
+</body>
+</html>

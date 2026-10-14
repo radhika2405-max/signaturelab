@@ -12,6 +12,16 @@ Built for fast, intuitive, and private signature comparison, SignatureLab proces
 
 ---
 
+## 🚀 Live Demo & Submission Access
+
+The project can be opened and evaluated on **any laptop, tablet, or phone** without any local setup:
+
+👉 **Live Web Application:** [https://radhika2405-max.github.io/signaturelab/](https://radhika2405-max.github.io/signaturelab/)  
+👉 **Streamlit Cloud Mirror:** [https://signaturelab.streamlit.app](https://signaturelab.streamlit.app)  
+👉 **1-Click Offline Preview:** Double-click `start_preview.bat` (Windows) or `./start_preview.sh` (macOS/Linux)  
+
+---
+
 ## 🚀 Key Features
 
 - **Side-by-Side Signature Upload:** Drag-and-drop or browse Reference and Test signature images (PNG, JPG, JPEG).
