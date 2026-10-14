@@ -1,0 +1,12 @@
+streamlit>=1.35.0
+numpy>=1.24.0
+opencv-python-headless>=4.8.0; platform_system == "Linux"
+opencv-python>=4.8.0; platform_system != "Linux"
+pillow>=10.0.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+plotly>=5.15.0
+reportlab>=4.0.0
+python-docx>=1.1.0
+pytest>=7.4.0
+nbformat>=5.9.0

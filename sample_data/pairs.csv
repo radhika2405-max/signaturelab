@@ -1,0 +1,7 @@
+pair_id,reference_image,test_image,pair_label
+1,author_a_genuine_1.png,author_a_genuine_2.png,Author A: Genuine vs Genuine
+2,author_a_genuine_1.png,author_a_forged.png,Author A: Genuine vs Skilled Forgery
+3,author_b_genuine_1.png,author_b_genuine_2.png,Author B: Genuine vs Genuine
+4,author_a_genuine_1.png,author_b_genuine_1.png,Author A vs Author B (Cross-Writer 1)
+5,author_a_genuine_2.png,author_b_genuine_2.png,Author A vs Author B (Cross-Writer 2)
+6,author_b_genuine_1.png,author_a_forged.png,Author B vs Author A Forgery

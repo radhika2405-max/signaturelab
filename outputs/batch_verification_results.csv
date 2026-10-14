@@ -1,0 +1,7 @@
+pair_id,pair_label,reference_image,test_image,dot_product,ref_norm,test_norm,euclidean_distance,cosine_similarity,angle_degrees,decision,expected_match,status
+1,Author A: Genuine vs Genuine,author_a_genuine_1.png,author_a_genuine_2.png,1117.854732795079,39.28989214492333,39.66053202928358,29.68070012677226,0.7173746030872451,44.16185396306471,Match,True,Success
+2,Author A: Genuine vs Skilled Forgery,author_a_genuine_1.png,author_a_forged.png,631.243352556709,39.28989214492333,40.770970290814034,44.0849286956521,0.3940623418252127,66.7924924521659,Non-Match,True,Success
+3,Author B: Genuine vs Genuine,author_b_genuine_1.png,author_b_genuine_2.png,1363.575809304114,40.42403139834553,40.372405412613965,23.170710275834427,0.8355165169706443,33.33034016544684,Match,True,Success
+4,Author A vs Author B (Cross-Writer 1),author_a_genuine_1.png,author_b_genuine_1.png,175.0861668589004,39.28989214492333,40.42403139834553,53.17542294647342,0.11023801275804536,83.67096386121575,Non-Match,False,Success
+5,Author A vs Author B (Cross-Writer 2),author_a_genuine_2.png,author_b_genuine_2.png,166.87717031910805,39.66053202928358,40.372405412613965,53.564303215929854,0.10422064712668284,84.01773342472318,Non-Match,False,Success
+6,Author B vs Author A Forgery,author_b_genuine_1.png,author_a_forged.png,225.15993848519798,40.42403139834553,40.770970290814034,53.348425056213884,0.1366156496334928,82.14794453337828,Non-Match,False,Success
